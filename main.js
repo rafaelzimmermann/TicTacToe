@@ -9,10 +9,11 @@ var ticTacToe = (function() {
 		xImageSource = "images/x.png",
 		cImageSource = "images/c.png",
 		imageSize = 48,
-		plays = 0,
+		moves = 0,
 		matrixGame = [[0,0,0],[0,0,0],[0,0,0]],
 		PLAYERX = 1,
-		PLAYERY = 2,
+		PLAYERY = 5,
+		gameover = false,
 
 		getContext = function () {
 			if ( typeof context === "undefined" ) {
@@ -56,70 +57,115 @@ var ticTacToe = (function() {
 		},
 
 		verifyWinner = function() {
+			var sumh = 0,
+				sumv = 0,
+				sumdiagonal1 = 0,
+				sumdiagonal2 = 0;
 			for ( var i = 0; i < matrixGame.length; i++) {
-				var sum = 0;
-				for (var j = 1; j < matrixGame.length; j++) {
-					sum += matrixGame[i][j];
+
+				var indexdiagonal2 = ( matrixGame.length - 1 - i); 
+
+				sumdiagonal1 += matrixGame[i][i];
+				sumdiagonal2 += matrixGame[i][indexdiagonal2];
+
+				console.log (i + " " + indexdiagonal2);
+
+				for (var j = 0; j < matrixGame.length; j++) {
+					sumh += matrixGame[i][j];
+					sumv += matrixGame[j][i];
 				};
 
-				if ( sum === 3 ) {
+				if ( sumh === 3 || sumv === 3 || sumdiagonal1 === 3 || sumdiagonal2 === 3 ) {
 					alert("X is the winner!");
-				} else if (sum === 6) {
+					return true;
+				} else if ( sumh === 15 || sumv === 15 || sumdiagonal1 === 15 || sumdiagonal2 === 15 ) {
 					alert("Circle is the winner!");
+					return true;
 				}
+
+				sumh = 0;
+				sumv = 0;
 			}
+			return false;
 		},
 
-		drawX = function ( x, y, height ) {
+		drawX = function ( position, height ) {
 			if ( context ) {
 				if ( typeof xImageObj === "undefined" ) {
 					return;
 				}
-				context.drawImage(xImageObj,x,y);
+				context.drawImage(xImageObj,position.x,position.y);
 			}
 		},
 
-		drawC = function ( x, y, height ) {
+		drawC = function ( position, height ) {
 			if ( context ) {
 				if ( typeof cImageObj === "undefined" ) {
 					return;
 				}
-				context.drawImage(cImageObj,x,y);
+				context.drawImage(cImageObj,position.x,position.y);
 			}
 		},
 
+		isSpotFree = function ( x, y) {
+			if ( matrixGame[x][y] === 0 ) {
+				return true;
+			}
+			return false;
+		},
+
+		adjustToSpotPosition = function ( position ) {
+
+				var x = position.x - border;
+				var y = position.y - border;
+
+				if ( x < 0 || y < 0) {
+					return
+				}
+
+				position.indexX = parseInt(x / (height+weigth));
+				position.indexY = parseInt(y / (height+weigth));
+				position.x = border+(position.indexX*height)+(position.indexX*weigth)+((height-imageSize)/2);
+				position.y = border+(position.indexY*height)+(position.indexY*weigth)+((height-imageSize)/2);
+
+				return position;
+
+		},
+
 		drawNext = function(event) {
-			var position = getRelativeMouseCoords(event);
 
-			var x = position.x - border;
-			var y = position.y - border;
+			if ( gameover === false ) {
+				var position = getRelativeMouseCoords(event);
 
-			if ( x < 0 || y < 0) {
-				return
-			}
+				position = adjustToSpotPosition(position);
 
-			indexX = parseInt(x / (height+weigth));
-			indexY = parseInt(y / (height+weigth));
-			x = (indexX*height)+border+(indexX*4*(height-imageSize));
-			y = (indexY*height)+border+(indexY*3*(height-imageSize));
+				if ( isSpotFree(position.indexX, position.indexY)) {
+					if (moves % 2 === 0) {
+						drawX(position, imageSize);
+						matrixGame[position.indexX][position.indexY] = PLAYERX;
+					} else {
+						drawC(position, imageSize);
+						matrixGame[position.indexX][position.indexY] = PLAYERY;
+					}
 
-			if (plays % 2 === 0) {
-				drawX(x, y, imageSize);
-				matrixGame[indexX][indexY] = PLAYERX;
+					moves++;
+
+					gameover = verifyWinner();
+				}
 			} else {
-				drawC(x, y, imageSize);
-				matrixGame[indexX][indexY] = PLAYERY;
+				restartGame();
 			}
 
-			// verifyWinner();
 
-			plays++;
+		},
 
+		clearCanvas = function () {
+			context.clearRect ( 0 , 0 , context.canvas.width , context.canvas.height );
 		},
 
 		drawTicTacToeBoard = function () {
 			if ( context ) {
-
+				clearCanvas();
 				var x = border, y = border;
 				var path = [
 					[x+height,y],
@@ -166,6 +212,20 @@ var ticTacToe = (function() {
 				context.closePath();
 				context.clearRect(x+height+weigth,y+height+weigth,height+weigth,height);
 			}
+		},
+
+		startGame = function () {
+			getContext();
+			configureMouseClick();
+			drawTicTacToeBoard();
+			loadImages();
+		},
+
+		restartGame = function () {
+			moves = 0;
+			matrixGame = [[0,0,0],[0,0,0],[0,0,0]];	
+			gameover = false;
+			startGame();
 		};
 
 
@@ -174,12 +234,10 @@ var ticTacToe = (function() {
 				border = b;
 				height = h;
 				weigth = w;
-				getContext();
-				configureMouseClick();
-				drawTicTacToeBoard();
-				loadImages(function() {
-					
-				});
+				startGame();
+			},
+			reset : function () {
+				restartGame();
 			}
 			
 		};
